@@ -1,82 +1,95 @@
-import tkinter as tk
-from tkinter import ttk
+from ui.components_window import ComponentsWindow
+from ui.login_window import LoginWindow
 from tkinter import messagebox
-import httpx
-import asyncio
-import json
-import traceback
+from tkinter import ttk
+import tkinter as tk
+print("Starting...")
 
-
-class LoginWindow(tk.Tk):
-    def __init__(self):
-        super().__init__()
-
-        self.title("Авторизация")
-        self.geometry("300x150")
-
-        self.login_label = ttk.Label(self, text="Логин:")
-        self.login_label.pack(pady=2)
-        self.login_input = ttk.Entry(self)
-        self.login_input.pack(pady=2)
-
-        self.password_label = ttk.Label(self, text="Пароль:")
-        self.password_label.pack(pady=2)
-        self.password_input = ttk.Entry(self, show="*")
-        self.password_input.pack(pady=2)
-
-        self.login_button = ttk.Button(
-            self, text="Войти", command=self.start_login_attempt)
-        self.login_button.pack(pady=10)
-
-    def start_login_attempt(self):
-        login = self.login_input.get()
-        password = self.password_input.get()
-        asyncio.run(self.attempt_login(login, password))
-
-    async def attempt_login(self, login, password):
-        try:
-            url = "http://127.0.0.1:8000/token"
-            data = {"username": login, "password": password}
-            headers = {"Content-Type": "application/x-www-form-urlencoded"}
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, data=data, headers=headers)
-                response.raise_for_status()
-                print(f"Response status code: {response.status_code}")
-                print(f"Response content: {response.content}")
-                token_data = response.json()
-                if token_data and "access_token" in token_data:
-                    print(f"Токен получен: {token_data}")
-                    self.show_main_window(login)
-                    self.destroy()  # Закрываем окно входа
-                else:
-                    print("Не удалось получить токен")
-                    messagebox.showerror(
-                        "Ошибка авторизации", "Неверный логин или пароль.")
-        except httpx.HTTPStatusError as e:
-            print(f"Ошибка HTTP: {e}")
-            messagebox.showerror("Ошибка авторизации",
-                                 f"Неверный логин или пароль: {e}")
-        except Exception as e:
-            print(f"Ошибка при отправке запроса: {e}")
-            messagebox.showerror("Ошибка авторизации",
-                                 f"Произошла ошибка: {e}")
-
-    def show_main_window(self, username):
-        main_window = MainWindow(username)
-        main_window.mainloop()  # Запускаем главный цикл главного окна
+try:
+    from ui.components_window import ComponentsWindow
+except Exception as e:
+    print(f"Error importing ComponentsWindow: {e}")
+    ComponentsWindow = None  # Чтобы избежать ошибки, если импорт не удался
+try:
+    from ui.login_window import LoginWindow
+except Exception as e:
+    print(f"Error importing LoginWindow: {e}")
+    LoginWindow = None  # Чтобы избежать ошибки, если импорт не удался
 
 
 class MainWindow(tk.Tk):
-    def __init__(self, username):
-        super().__init__()
+    def __init__(self):
+        print("MainWindow: Initializing...")
+        tk.Tk.__init__(self)
+        self.title("LindenPC - AIS")
+        self.geometry("800x600")
+        self.token = None
+        self.create_menu()
+        self.create_widgets()
+        self.get_token()
+        print("MainWindow: Initialized")
 
-        self.title(f"Главное окно - {username}")
-        self.geometry("400x300")
+    def get_token(self):
+        print("get_token: Starting")
+        self.token = self.get_token_from_login()
+        print("get_token: Finished")
 
-        self.label = ttk.Label(self, text=f"Привет, {username}!")
-        self.label.pack(pady=20)
+    def get_token_from_login(self):
+        print("get_token_from_login: Starting")
+        login_window = LoginWindow(self)
+        print("get_token_from_login: Finished")
+        return self.token
+
+    def create_menu(self):
+        print("create_menu: Starting")
+        self.menu_bar = tk.Menu(self)
+        self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.file_menu.add_command(label="Выход", command=self.quit)
+        self.menu_bar.add_cascade(label="Файл", menu=self.file_menu)
+        self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.help_menu.add_command(
+            label="О программе", command=self.show_about)
+        self.menu_bar.add_cascade(label="Помощь", menu=self.help_menu)
+        self.config(menu=self.menu_bar)
+        print("create_menu: Finished")
+
+    def create_widgets(self):
+        print("create_widgets: Starting")
+        self.components_button = ttk.Button(
+            self, text="Управление комплектующими", command=self.open_components_window)
+        self.components_button.pack(pady=20)
+        self.users_button = ttk.Button(
+            self, text="Управление пользователями", command=self.open_users_window)
+        self.users_button.pack(pady=20)
+        self.welcome_label = ttk.Label(
+            self, text="Добро пожаловать в AIS LindenPC!")
+        self.welcome_label.pack(pady=20)
+        print("create_widgets: Finished")
+
+    def open_components_window(self):
+        print("open_components_window: Starting")
+        ComponentsWindow(self)
+        print("open_components_window: Finished")
+
+    def open_users_window(self):
+        print("open_users_window: Starting")
+        pass
+        print("open_users_window: Finished")
+
+    def show_about(self):
+        print("show_about: Starting")
+        tk.messagebox.showinfo(
+            "О программе", "Автоматизированная информационная система для LindenPC")
+        print("show_about: Finished")
+
+    def set_token(self, token):
+        print("set_token: Starting")
+        self.token = token
+        print("set_token: Finished")
 
 
-if __name__ == "__main__":
-    login_window = LoginWindow()
-    login_window.mainloop()
+print("Creating MainWindow...")
+main_window = MainWindow()
+print("Running mainloop...")
+main_window.mainloop()
+print("Exited mainloop")
