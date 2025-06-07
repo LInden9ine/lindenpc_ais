@@ -1,20 +1,12 @@
+import tkinter as tk
+from tkinter import ttk
+import tkinter.messagebox as messagebox
+
 from ui.components_window import ComponentsWindow
 from ui.login_window import LoginWindow
-from tkinter import messagebox
-from tkinter import ttk
-import tkinter as tk
-print("Starting...")
+import os
 
-try:
-    from ui.components_window import ComponentsWindow
-except Exception as e:
-    print(f"Error importing ComponentsWindow: {e}")
-    ComponentsWindow = None  # Чтобы избежать ошибки, если импорт не удался
-try:
-    from ui.login_window import LoginWindow
-except Exception as e:
-    print(f"Error importing LoginWindow: {e}")
-    LoginWindow = None  # Чтобы избежать ошибки, если импорт не удался
+print("Starting...")
 
 
 class MainWindow(tk.Tk):
@@ -23,22 +15,24 @@ class MainWindow(tk.Tk):
         tk.Tk.__init__(self)
         self.title("LindenPC - AIS")
         self.geometry("800x600")
-        self.token = None
-        self.create_menu()
+        self._token = None  # Используем _token для внутреннего хранения
         self.create_widgets()
         self.get_token()
         print("MainWindow: Initialized")
 
     def get_token(self):
         print("get_token: Starting")
-        self.token = self.get_token_from_login()
+        self.get_token_from_login()
         print("get_token: Finished")
 
     def get_token_from_login(self):
         print("get_token_from_login: Starting")
         login_window = LoginWindow(self)
+        self.wait_window(login_window)  # Ждем закрытия окна логина
+        self.token = login_window.token  # Устанавливаем токен
+        if self.token:
+            self.create_menu()
         print("get_token_from_login: Finished")
-        return self.token
 
     def create_menu(self):
         print("create_menu: Starting")
@@ -58,9 +52,6 @@ class MainWindow(tk.Tk):
         self.components_button = ttk.Button(
             self, text="Управление комплектующими", command=self.open_components_window)
         self.components_button.pack(pady=20)
-        self.users_button = ttk.Button(
-            self, text="Управление пользователями", command=self.open_users_window)
-        self.users_button.pack(pady=20)
         self.welcome_label = ttk.Label(
             self, text="Добро пожаловать в AIS LindenPC!")
         self.welcome_label.pack(pady=20)
@@ -68,13 +59,12 @@ class MainWindow(tk.Tk):
 
     def open_components_window(self):
         print("open_components_window: Starting")
-        ComponentsWindow(self)
+        print(f"Token in MainWindow: {self.token}")  # Добавляем эту строку
+        if self.token:  # Проверяем, что токен установлен
+            ComponentsWindow(self, self.token)  # Передаем токен
+        else:
+            messagebox.showerror("Ошибка", "Необходимо авторизоваться")
         print("open_components_window: Finished")
-
-    def open_users_window(self):
-        print("open_users_window: Starting")
-        pass
-        print("open_users_window: Finished")
 
     def show_about(self):
         print("show_about: Starting")
@@ -82,9 +72,14 @@ class MainWindow(tk.Tk):
             "О программе", "Автоматизированная информационная система для LindenPC")
         print("show_about: Finished")
 
-    def set_token(self, token):
+    @property
+    def token(self):
+        return self._token
+
+    @token.setter
+    def token(self, value):
         print("set_token: Starting")
-        self.token = token
+        self._token = value
         print("set_token: Finished")
 
 

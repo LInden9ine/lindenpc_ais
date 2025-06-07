@@ -1,53 +1,76 @@
-# ui/login_window.py
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
+import tkinter.messagebox as messagebox
 import requests
-import json
+import configparser
+import os
+import urllib.parse
+import json  # Импортируем модуль json
 
 
-class LoginWindow:
-    def __init__(self, master):  # master - это MainWindow
-        print("LoginWindow: Initializing")  # Добавлено
-        self.master = master
-        self.root = tk.Toplevel(master)  # Создаем Toplevel окно
-        self.root.title("Авторизация")
-        self.root.geometry("300x200")
+class LoginWindow(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.title("Авторизация")
+        self.geometry("300x200")
+        self.token = None  # Инициализируем атрибут token
 
-        self.login_label = ttk.Label(self.root, text="Логин:")
+        self.config = configparser.ConfigParser()
+        try:
+            self.config.read("config.ini")
+            self.api_url = self.config.get("API", "url")
+        except Exception as e:
+            messagebox.showerror(
+                "Ошибка", f"Ошибка чтения config.ini: {e}")
+            self.api_url = None  # Устанавливаем в None, чтобы предотвратить дальнейшие ошибки
+            return  # Прерываем инициализацию
+
+        self.create_widgets()
+        print("LoginWindow: Initialized")
+
+    def create_widgets(self):
+        self.login_label = ttk.Label(self, text="Логин:")
         self.login_label.pack(pady=5)
-        self.login_entry = ttk.Entry(self.root)
+        self.login_entry = ttk.Entry(self)
         self.login_entry.pack(pady=5)
 
-        self.password_label = ttk.Label(self.root, text="Пароль:")
+        self.password_label = ttk.Label(self, text="Пароль:")
         self.password_label.pack(pady=5)
-        self.password_entry = ttk.Entry(self.root, show="*")
+        self.password_entry = ttk.Entry(self, show="*")
         self.password_entry.pack(pady=5)
 
-        self.login_button = ttk.Button(
-            self.root, text="Войти", command=self.login)
+        self.login_button = ttk.Button(self, text="Войти", command=self.login)
         self.login_button.pack(pady=10)
-        print("LoginWindow: Initialized")  # Добавлено
 
     def login(self):
-        print("login: Starting")  # Добавлено
-        login = self.login_entry.get()
+        print("login: Starting")
+        if not self.api_url:  # Проверяем, удалось ли прочитать config.ini
+            messagebox.showerror(
+                "Ошибка", "Не удалось прочитать файл конфигурации.")
+            return
+
+        username = self.login_entry.get()
         password = self.password_entry.get()
 
-        data = {"username": login, "password": password}
-
         try:
-            response = requests.post("http://127.0.0.1:8000/token", data=data)
-            response.raise_for_status()
-            token_data = response.json()
-            access_token = token_data["access_token"]
+            # Создаем словарь с данными
+            data = {"username": username, "password": password}
 
-            self.master.set_token(access_token)
-            messagebox.showinfo("Успех", "Авторизация прошла успешно!")
-            self.root.destroy()
+            # Отправляем POST-запрос с данными в формате application/x-www-form-urlencoded
+            response = requests.post(f"{self.api_url}/token", data=data)
+
+            response.raise_for_status()
+            data = response.json()
+            access_token = data.get("access_token")
+
+            if access_token:
+                print("access_token", access_token)
+                self.token = access_token  # Устанавливаем токен
+                self.destroy()  # Закрываем окно авторизации
+            else:
+                messagebox.showerror(
+                    "Ошибка", "Не удалось получить токен доступа")
         except requests.exceptions.RequestException as e:
             messagebox.showerror("Ошибка", f"Ошибка авторизации: {e}")
-        except (KeyError, TypeError) as e:
-            messagebox.showerror(
-                "Ошибка", f"Неверный формат ответа от сервера: {e}")
-        print("login: Finished")  # Добавлено
+        print("login: Finished")
