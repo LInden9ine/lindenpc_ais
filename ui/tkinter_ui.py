@@ -16,6 +16,7 @@ class MainWindow(tk.Tk):
         self.title("LindenPC - AIS")
         self.geometry("800x600")
         self._token = None  # Используем _token для внутреннего хранения
+        self.withdraw()  # Скрываем главное окно при инициализации
         self.create_widgets()
         self.get_token()
         print("MainWindow: Initialized")
@@ -32,6 +33,7 @@ class MainWindow(tk.Tk):
         self.token = login_window.token  # Устанавливаем токен
         if self.token:
             self.create_menu()
+            self.deiconify()  # Показываем главное окно после авторизации
         print("get_token_from_login: Finished")
 
     def create_menu(self):

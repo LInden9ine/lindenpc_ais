@@ -11,7 +11,6 @@ class ComponentsWindow(tk.Toplevel):
         super().__init__(parent)
         self.parent = parent
         self.token = token
-        # Добавляем эту строку
         print(f"Token received in ComponentsWindow: {self.token}")
         self.title("Управление комплектующими")
         self.geometry("800x600")
@@ -46,6 +45,10 @@ class ComponentsWindow(tk.Toplevel):
         self.load_components()
 
     def load_components(self):
+        # Очищаем Treeview перед загрузкой данных
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
         try:
             headers = {"Authorization": f"Bearer {self.token}"}
             response = requests.get(
@@ -113,6 +116,8 @@ class ComponentForm(tk.Toplevel):
         self.component_id = component_id
         self.title("Добавить/Редактировать компонент")
         self.geometry("400x450")  # Увеличиваем высоту окна
+        self.transient(parent)  # Делаем окно модальным
+        self.grab_set()  # Перехватываем все события
 
         self.config = configparser.ConfigParser()
         self.config.read("config.ini")
@@ -120,38 +125,33 @@ class ComponentForm(tk.Toplevel):
 
         self.component_name_label = ttk.Label(self, text="Название:")
         self.component_name_label.pack(pady=5)
-        self.component_name_entry = ttk.Entry(
-            self, width=30)  # Увеличиваем ширину поля
+        self.component_name_entry = ttk.Entry(self, width=30)
         self.component_name_entry.pack(pady=5)
 
         self.description_label = ttk.Label(self, text="Описание:")
         self.description_label.pack(pady=5)
-        self.description_entry = ttk.Entry(
-            self, width=30)  # Увеличиваем ширину поля
+        self.description_entry = ttk.Entry(self, width=30)
         self.description_entry.pack(pady=5)
 
         self.category_id_label = ttk.Label(self, text="ID категории:")
         self.category_id_label.pack(pady=5)
-        self.category_id_entry = ttk.Entry(
-            self, width=30)  # Увеличиваем ширину поля
+        self.category_id_entry = ttk.Entry(self, width=30)
         self.category_id_entry.pack(pady=5)
 
         self.manufacturer_id_label = ttk.Label(self, text="ID производителя:")
         self.manufacturer_id_label.pack(pady=5)
-        self.manufacturer_id_entry = ttk.Entry(
-            self, width=30)  # Увеличиваем ширину поля
+        self.manufacturer_id_entry = ttk.Entry(self, width=30)
         self.manufacturer_id_entry.pack(pady=5)
 
         self.price_label = ttk.Label(self, text="Цена:")
         self.price_label.pack(pady=5)
-        self.price_entry = ttk.Entry(self, width=30)  # Увеличиваем ширину поля
+        self.price_entry = ttk.Entry(self, width=30)
         self.price_entry.pack(pady=5)
 
         self.quantity_in_stock_label = ttk.Label(
             self, text="Количество на складе:")
         self.quantity_in_stock_label.pack(pady=5)
-        self.quantity_in_stock_entry = ttk.Entry(
-            self, width=30)  # Увеличиваем ширину поля
+        self.quantity_in_stock_entry = ttk.Entry(self, width=30)
         self.quantity_in_stock_entry.pack(pady=5)
 
         self.save_button = ttk.Button(
