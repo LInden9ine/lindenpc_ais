@@ -6,15 +6,17 @@ import configparser
 import os
 import urllib.parse
 import json  # Импортируем модуль json
+import threading  # Импортируем модуль threading
 
 
 class LoginWindow(tk.Toplevel):
-    def __init__(self, parent):
+    def __init__(self, parent, login_success_callback):  # Add callback
         super().__init__(parent)
         self.parent = parent
         self.title("Авторизация")
         self.geometry("300x200")
         self.token = None  # Инициализируем атрибут token
+        self.login_success_callback = login_success_callback  # Save callback
 
         self.config = configparser.ConfigParser()
         try:
@@ -53,24 +55,65 @@ class LoginWindow(tk.Toplevel):
         username = self.login_entry.get()
         password = self.password_entry.get()
 
-        try:
-            # Создаем словарь с данными
-            data = {"username": username, "password": password}
+        def do_login():  # Функция для выполнения в отдельном потоке
+            print("do_login: Starting in thread")
+            try:
+                try:
+                    # Создаем словарь с данными
+                    data = {"username": username, "password": password}
+                    print("do_login: Data created:", data)
+                except Exception as e:
+                    print("do_login: Error creating data:", e)
+                    self.parent.after(0, messagebox.showerror,
+                                      "Ошибка", f"Ошибка при создании данных: {e}")
+                    return
 
-            # Отправляем POST-запрос с данными в формате application/x-www-form-urlencoded
-            response = requests.post(f"{self.api_url}/token", data=data)
+                try:
+                    # Отправляем POST-запрос с данными в формате application/x-www-form-urlencoded
+                    print(
+                        f"do_login: Sending request to: {self.api_url}/token")
+                    response = requests.post(
+                        f"{self.api_url}/token", data=data)
+                    print(
+                        f"do_login: Response status code: {response.status_code}")
+                    response.raise_for_status()
+                    print("do_login: Request successful")
+                except requests.exceptions.RequestException as e:
+                    print(f"do_login: Request error: {e}")
+                    self.parent.after(0, messagebox.showerror,
+                                      "Ошибка", f"Ошибка авторизации: {e}")
+                    return
 
-            response.raise_for_status()
-            data = response.json()
-            access_token = data.get("access_token")
+                try:
+                    user_data = response.json()
+                    print(f"do_login: User data: {user_data}")
+                    access_token = user_data.get("access_token")
+                except Exception as e:
+                    print(f"do_login: Error parsing JSON: {e}")
+                    self.parent.after(0, messagebox.showerror,
+                                      "Ошибка", "Ошибка при разборе ответа сервера")
+                    return
 
-            if access_token:
-                print("access_token", access_token)
-                self.token = access_token  # Устанавливаем токен
-                self.destroy()  # Закрываем окно авторизации
-            else:
-                messagebox.showerror(
-                    "Ошибка", "Не удалось получить токен доступа")
-        except requests.exceptions.RequestException as e:
-            messagebox.showerror("Ошибка", f"Ошибка авторизации: {e}")
-        print("login: Finished")
+                if access_token:
+                    print("do_login: Access token received")
+                    # ВАЖНО: Обновляем UI из основного потока
+                    self.parent.after(
+                        0, self.login_success_callback, access_token, user_data)
+                    # Закрываем окно авторизации
+                    self.parent.after(0, self.destroy)
+                else:
+                    print("do_login: Access token not received")
+                    # ВАЖНО: Обновляем UI из основного потока
+                    self.parent.after(0, messagebox.showerror,
+                                      "Ошибка", "Не удалось получить токен доступа")
+            except Exception as e:
+                print(f"do_login: An unexpected error occurred: {e}")
+                self.parent.after(0, messagebox.showerror,
+                                  "Ошибка", f"Непредвиденная ошибка: {e}")
+            print("do_login: Finished in thread")
+
+        # Создаем и запускаем поток
+        print("login: Creating and starting thread")
+        thread = threading.Thread(target=do_login)
+        thread.start()
+        print("login: Thread started")

@@ -7,11 +7,13 @@ import json
 
 
 class ComponentsWindow(tk.Toplevel):
-    def __init__(self, parent, token):
+    def __init__(self, parent, token, user_data):  # Добавляем user_data в конструктор
         super().__init__(parent)
         self.parent = parent
         self.token = token
+        self.user_data = user_data  # Сохраняем данные пользователя
         print(f"Token received in ComponentsWindow: {self.token}")
+        print(f"User data received in ComponentsWindow: {self.user_data}")
         self.title("Управление комплектующими")
         self.geometry("800x600")
 
@@ -30,6 +32,9 @@ class ComponentsWindow(tk.Toplevel):
         self.tree.heading("Количество", text="Количество")
         self.tree.pack(expand=True, fill="both")
 
+        # Проверяем роль пользователя и скрываем кнопки, если роль не "admin"
+        # Тут нужно указать = "admin"
+        # if self.user_data.get("role_name") == "admin":
         self.add_button = ttk.Button(
             self, text="Добавить", command=self.add_component)
         self.add_button.pack(pady=5)
@@ -41,6 +46,8 @@ class ComponentsWindow(tk.Toplevel):
         self.delete_button = ttk.Button(
             self, text="Удалить", command=self.delete_component)
         self.delete_button.pack(pady=5)
+        # else:
+        #     print("Пользователь не является администратором. Кнопки управления скрыты.")
 
         self.load_components()
 
@@ -72,10 +79,21 @@ class ComponentsWindow(tk.Toplevel):
                 "Ошибка", f"Ошибка при загрузке компонентов: {e}")
 
     def add_component(self):
-        # Передаем load_components
-        ComponentForm(self, self.token, self.load_components)
+        # Проверяем роль пользователя
+        # if self.user_data.get("role_name") == 'admin':  # Или используйте role_id
+        #     messagebox.showerror(
+        #         "Ошибка доступа", "Только администратор может добавлять компоненты.")
+        #     return
+
+        ComponentForm(self, self.token, self.load_components,
+                      self.user_data)  # ПЕРЕДАЕМ user_data
 
     def edit_component(self):
+        # Проверяем роль пользователя
+        # if self.user_data.get("role_name") == 'admin':  # Или используйте role_id
+        #     messagebox.showerror(
+        #         "Ошибка доступа", "Только администратор может редактировать компоненты.")
+        #     return
         selected_item = self.tree.selection()
         if not selected_item:
             messagebox.showinfo(
@@ -84,9 +102,14 @@ class ComponentsWindow(tk.Toplevel):
 
         component_id = self.tree.item(selected_item, "values")[0]
         ComponentForm(self, self.token, self.load_components,
-                      component_id=component_id)
+                      self.user_data, component_id=component_id)  # ПЕРЕДАЕМ user_data
 
     def delete_component(self):
+        # Проверяем роль пользователя
+        # if self.user_data.get("role_name") == 'admin':  # Или используйте role_id
+        #     messagebox.showerror(
+        #         "Ошибка доступа", "Только администратор может удалять компоненты.")
+        #     return
         selected_item = self.tree.selection()
         if not selected_item:
             messagebox.showinfo("Внимание", "Выберите компонент для удаления.")
@@ -107,17 +130,17 @@ class ComponentsWindow(tk.Toplevel):
 
 
 class ComponentForm(tk.Toplevel):
-    def __init__(self, parent, token, refresh_callback, component_id=None):
+    def __init__(self, parent, token, refresh_callback, user_data, component_id=None):  # Добавляем user_data
         super().__init__(parent)
         self.parent = parent
         self.token = token
-        # Сохраняем ссылку на функцию обновления
         self.refresh_callback = refresh_callback
         self.component_id = component_id
+        self.user_data = user_data  # Сохраняем user_data
         self.title("Добавить/Редактировать компонент")
-        self.geometry("400x450")  # Увеличиваем высоту окна
-        self.transient(parent)  # Делаем окно модальным
-        self.grab_set()  # Перехватываем все события
+        self.geometry("400x450")
+        self.transient(parent)
+        self.grab_set()
 
         self.config = configparser.ConfigParser()
         self.config.read("config.ini")
@@ -225,8 +248,8 @@ class ComponentForm(tk.Toplevel):
 
             response.raise_for_status()
             messagebox.showinfo("Успех", "Компонент успешно сохранен.")
-            self.destroy()  # Закрываем окно формы
-            self.refresh_callback()  # Вызываем функцию обновления
+            self.destroy()
+            self.refresh_callback()
         except requests.exceptions.RequestException as e:
             messagebox.showerror(
                 "Ошибка", f"Ошибка при сохранении компонента: {e}")

@@ -1,4 +1,3 @@
-# api/database.py
 import os
 from peewee import *
 from dotenv import load_dotenv
@@ -6,11 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///lindenpc.db")
-
-if "sqlite" in DATABASE_URL:
-    db = SqliteDatabase(DATABASE_URL.split(":///")[1])  # для SQLite
-else:
-    db = PostgresqlDatabase(DATABASE_URL)  # для PostgreSQL
+db = SqliteDatabase(DATABASE_URL.split(
+    ":///")[1]) if "sqlite" in DATABASE_URL else PostgresqlDatabase(DATABASE_URL)
 
 
 class BaseModel(Model):
@@ -30,12 +26,13 @@ class Role(BaseModel):
 class User(BaseModel):
     user_id = AutoField(primary_key=True)
     login = CharField(unique=True)
-    password = CharField()
+    password = CharField()  # Поле пароля
     email = CharField(unique=True)
     first_name = CharField(null=True)
     last_name = CharField(null=True)
     # Corrected ForeignKeyField
-    role = ForeignKeyField(Role, backref='users', field='role_id')
+    role = ForeignKeyField(
+        Role, backref='users', field='role_id')
 
     class Meta:
         table_name = 'User'  # Явное указание имени таблицы
@@ -67,7 +64,6 @@ class Component(BaseModel):
     category = ForeignKeyField(
         Category, backref='components', field='category_id')
     manufacturer = ForeignKeyField(
-        # Corrected ForeignKeyField
         Manufacturer, backref='components', field='manufacturer_id')
     price = DecimalField()
     quantity_in_stock = IntegerField()
@@ -148,7 +144,3 @@ def create_tables():
         db.create_tables([Role, User, Category, Manufacturer, Component,
                           Delivery, Order, DeliveryItem, EventLog, Audit])
         print("Tables created successfully")
-
-
-if __name__ == '__main__':
-    create_tables()
