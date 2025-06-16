@@ -111,8 +111,8 @@ class MainWindow(tk.Tk):
 
 
 if __name__ == "__main__":
-    # Создаем экземпляр главного окна (но пока не отображаем его)
-    app = MainWindow()
-    # Отображаем окно входа
-    app.open_login_window()
-    app.mainloop()
+    root = tk.Tk()  # Создаём скрытое окно для Tkinter
+    root.withdraw()  # Скрываем его
+    login_window = LoginWindow(
+        root, lambda token, user_data: MainWindow(token, user_data).mainloop())
+    root.mainloop()
